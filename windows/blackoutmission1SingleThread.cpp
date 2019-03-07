@@ -55,6 +55,7 @@ double alpha_mean = 0;
 double move_distance = 0;
 double first_magic_distance = 5;
 int turning_count = 0;
+int turnBackCount = 0;
 int stage_one_moving_count = 0;
 int magic_distance_flag = 1;
 string move_direction;
@@ -138,7 +139,7 @@ int main(int argc, char * argv[]) try{
 	cvCreateTrackbar("LowV", "Control", &iLowV, 255); //Value (0 - 255)
 	cvCreateTrackbar("HighV", "Control", &iHighV, 255);
 
-	std::ifstream config("C:/Users/Jessy/Desktop/BallDetection-master/windows/include/config/labconfig4352.json");
+	std::ifstream config("../include/config/labconfig4352.json");
 	std::string str((std::istreambuf_iterator<char>(config)),
 		std::istreambuf_iterator<char>());
 	rs400::advanced_mode dev4json = profile.get_device();
@@ -286,8 +287,10 @@ int main(int argc, char * argv[]) try{
 		this_x_meter = magic_distance;
 		this_y_meter = abs(length_to_mid);
 		cout << "pixal to bottom ="<< pixal_to_bottom << endl;
-		if (turning_count <= 70){
+		if (turning_count <= 30 && turnBackCount%2 == 0){
 			if (pixal_to_bottom != 480 ) {
+				ZActionModule::instance()->sendPacket(2, 0, 0, -20);
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 				cout << "go to next state" << endl;
 				break;
 			}
@@ -300,11 +303,34 @@ int main(int argc, char * argv[]) try{
 				}
 				else if (pixal_to_left == 0 && last_frame_length < 0) {
 					ZActionModule::instance()->sendPacket(2, 0, 0, -60);
-					std::this_thread::sleep_for(std::chrono::milliseconds(10));
+					std::this_thread::sleep_for(std::chrono::milliseconds(1));
 					cout << "2222" << endl;
 					turning_count++;
 				}
 			}
+		}
+		else if (turning_count <= 15 && turnBackCount%2 == 1) {
+			if (pixal_to_bottom != 480) {
+				ZActionModule::instance()->sendPacket(2, 0, 0, -20);
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				cout << "go to next state" << endl;
+				break;
+			}
+			else {
+				if (pixal_to_left == 0 && last_frame_length > 0) {
+					ZActionModule::instance()->sendPacket(2, 0, 0, 120);
+					std::this_thread::sleep_for(std::chrono::milliseconds(1));
+					cout << "1111" << endl;
+					turning_count++;
+				}
+				else if (pixal_to_left == 0 && last_frame_length < 0) {
+					ZActionModule::instance()->sendPacket(2, 0, 0, -60);
+					std::this_thread::sleep_for(std::chrono::milliseconds(1));
+					cout << "2222" << endl;
+					turning_count++;
+				}
+			}
+
 		}
 		else{
 			if (pixal_to_bottom != 480 ) {
@@ -319,12 +345,14 @@ int main(int argc, char * argv[]) try{
 				}
 			}
 			turning_count = 0;
+			turnBackCount += 1;
 			std::this_thread::sleep_for(std::chrono::milliseconds(500));
 		}
 		cout << "All   " << 1000 * ((double)(clock() - time0)) / CLOCKS_PER_SEC << endl;
 
 	}//end of while
 	// second while for catching the stationary ball
+
 	 while (cvGetWindowHandle(window_name)){ // Application still alive?
 
 	//  make sure the ball is not in mouth
